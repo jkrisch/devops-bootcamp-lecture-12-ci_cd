@@ -3,7 +3,7 @@ terraform{
     backend "s3" {
         bucket = "myapp-tf-s3-bucket-jk"
         key = "myapp/state.tfstate"
-        region "eu-central-1"
+        region = "eu-central-1"
     }
     
 }
