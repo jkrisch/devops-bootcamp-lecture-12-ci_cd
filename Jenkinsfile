@@ -46,7 +46,7 @@ pipeline {
                 dir ('terraform'){
                     //tf provision
                     sh """
-                        terraform init
+                        terraform init -reconfigure
                         terraform apply --auto-approve
                     """
                     //output the public ip adress within jenkins var
