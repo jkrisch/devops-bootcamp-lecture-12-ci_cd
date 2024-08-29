@@ -35,26 +35,48 @@ pipeline {
     }
 
     stage("provision infra"){
-        //tf provision
-        sh """
-            terraform init
-            terraform apply --auto-aprove        
-        """
+        environment {
+            AWS_ACCESS_KEY_ID = credentials('AWS_ACCESS_KEY')
+            AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
+            TF_VAR_my_ip = credentials('myIP')
+        }
+        steps{
+            script{
+                dir ('terraform'){
+                    //tf provision
+                    sh """
+                        terraform init
+                        terraform apply --auto-aprove
+                    """
+                    #output the public ip adress within jenkins var
+                    EC2_PUBLIC_IP = sh(
+                        script: "terraform output ec2_instance_public_ip",
+                        returnStdout: true
+                    ).trim()                    
+                }
+            }
+        }
     }
 
     stage("deploy") {
+        environment{
+            DOCKER_CREDS = credentials("docker-login")
+        }
       steps {
         script {
-          echo 'deploying docker image to EC2...'
-          
-          def shellCmd = "bash ./server-cmds.sh ${IMAGE_NAME}"
-          def ec2Instance = "ec2-user@35.180.151.121"
+            echo "Waiting for EC2 instance to initialize"
+            sleep(time: 90, unit: "SECONDS")
 
-          sshagent(['server-ssh-key']) {
-            sh "scp -o server-cmds.sh ${ec2Instance}:/home/ec2-user"
-            sh "scp -o docker-compose.yaml ${ec2Instance}:/home/ec2-user"
-            sh "ssh -o StrictHostKeyChecking=no ${ec2Instance} ${shellCmd}"
-          }
+            echo 'deploying docker image to EC2...'
+            
+            def shellCmd = "bash ./server-cmds.sh ${IMAGE_NAME} ${DOCKER_CREDS_USR} ${DOCKER_CREDS_PSW}"
+            def ec2Instance = "ec2-user@${EC2_PUBLIC_IP}"
+
+            sshagent(['ec2-ssh-key']) {
+                sh "scp -o StrictHostKeyChecking=no server-cmds.sh ${ec2Instance}:/home/ec2-user"
+                sh "scp -o StrictHostKeyChecking=no docker-compose.yaml ${ec2Instance}:/home/ec2-user"
+                sh "ssh -o StrictHostKeyChecking=no ${ec2Instance} ${shellCmd}"
+            }
         }
       }
     }               
