@@ -48,7 +48,7 @@ pipeline {
                         terraform init
                         terraform apply --auto-aprove
                     """
-                    #output the public ip adress within jenkins var
+                    //output the public ip adress within jenkins var
                     EC2_PUBLIC_IP = sh(
                         script: "terraform output ec2_instance_public_ip",
                         returnStdout: true
