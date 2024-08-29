@@ -47,7 +47,7 @@ pipeline {
                     //tf provision
                     sh """
                         terraform init -migrate-state
-                        terraform apply --auto-approve
+                        #terraform apply --auto-approve
                     """
                     //output the public ip adress within jenkins var
                     EC2_PUBLIC_IP = sh(
