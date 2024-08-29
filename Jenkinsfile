@@ -46,7 +46,7 @@ pipeline {
                     //tf provision
                     sh """
                         terraform init
-                        terraform apply --auto-aprove
+                        terraform apply --auto-approve
                     """
                     //output the public ip adress within jenkins var
                     EC2_PUBLIC_IP = sh(
