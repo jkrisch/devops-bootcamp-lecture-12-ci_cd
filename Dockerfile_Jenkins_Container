@@ -1,0 +1,54 @@
+FROM jenkins/jenkins:2.467-jdk21
+USER root
+
+ARG DOCKER_GID=138
+
+RUN mkdir /var/jenkins_home/.kube && \
+    mkdir /var/jenkins_home/.aws
+#COPY kubeconfig /var/jenkins_home/.kube/
+
+# Install Docker CLI, gradle and curl, gnupg
+RUN apt-get update && \
+    apt-get install -y docker.io \
+                       gradle \
+                       curl \
+                       unzip \
+                       gnupg \
+                       software-properties-common \
+                       wget
+
+# Install helm
+RUN curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 && \
+    chmod 700 get_helm.sh && \
+    ./get_helm.sh
+
+# Install kubectl
+RUN curl -LO https://dl.k8s.io/release/v1.30.0/bin/linux/amd64/kubectl && \
+    install -o root -g root -m 0755 kubectl /usr/local/bin/kubectlex
+#ENV KUBECONFIG=/var/jenkins_home/.kube/kubeconfig
+
+#install aws-iam-authenticator
+RUN curl -Lo aws-iam-authenticator https://github.com/kubernetes-sigs/aws-iam-authenticator/releases/download/v0.6.11/aws-iam-authenticator_0.6.11_linux_amd64 && \
+    chmod +x ./aws-iam-authenticator && \
+    mv ./aws-iam-authenticator /usr/local/bin 
+
+#Install aws cli
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
+    unzip awscliv2.zip && \
+    ./aws/install
+
+RUN wget -O- https://apt.releases.hashicorp.com/gpg | \
+    gpg --dearmor | \
+    tee /usr/share/keyrings/hashicorp-archive-keyring.gpg > /dev/null
+
+RUN echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] \
+    https://apt.releases.hashicorp.com $(lsb_release -cs) main" | \
+    tee /etc/apt/sources.list.d/hashicorp.list
+RUN apt-get update && \
+    apt-get install -y terraform    
+
+
+RUN sed -i "s/docker:x:[0-9]*/docker:x:${DOCKER_GID}/" /etc/group && \
+    usermod -aG docker jenkins
+
+USER jenkins
